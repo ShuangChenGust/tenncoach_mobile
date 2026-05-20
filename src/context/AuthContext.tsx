@@ -56,6 +56,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setStudent(user);
   };
 
+  const safeParse = <T,>(raw: string | null): T | null => {
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      return null;
+    }
+  };
+
   const extractCoachUser = (data: any): Coach | null => {
     const user = data?.user ?? data;
     if (!user || typeof user !== 'object') return null;
@@ -79,24 +88,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           SecureStore.getItemAsync(ROLE_KEY).catch(() => null),
         ]);
 
-        if (coachRaw) {
-          const parsed: Coach = JSON.parse(coachRaw);
+        const parsedCoach = safeParse<Coach>(coachRaw);
+        if (parsedCoach) {
           // If cached data is missing profile fields (saved before login returned
           // full coach+Coaches JOIN), refresh before the RouteGuard evaluates so
           // coaches with completed profiles are never wrongly sent to setup.
-          if (parsed.user_id && parsed.courtLatitude == null && !parsed.court_locations) {
+          if (parsedCoach.user_id && parsedCoach.courtLatitude == null && !parsedCoach.court_locations) {
             try {
-              const fresh = await coachesAPI.getById(String(parsed.user_id));
-              await persistCoach((!fresh?.error ? fresh : parsed) as Coach);
+              const fresh = await coachesAPI.getById(String(parsedCoach.user_id));
+              await persistCoach((!fresh?.error ? fresh : parsedCoach) as Coach);
             } catch {
-              setCoach(parsed);
+              setCoach(parsedCoach);
             }
           } else {
-            setCoach(parsed);
+            setCoach(parsedCoach);
           }
         }
 
-        if (studentRaw) setStudent(JSON.parse(studentRaw));
+        const parsedStudent = safeParse<Student>(studentRaw);
+        if (parsedStudent) setStudent(parsedStudent);
         if (roleRaw === 'coach' || roleRaw === 'student') setActiveRole(roleRaw);
       } finally {
         setLoading(false);

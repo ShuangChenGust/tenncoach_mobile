@@ -536,7 +536,21 @@ export default function MessagesScreen() {
           {/* Booking nudge — mirrors web booking-nudge */}
           {bookingNudge && (
             <View style={styles.bookingNudge}>
-              <Text style={styles.nudgeText}>📅 Ready to confirm a session?</Text>
+              <Text style={styles.nudgeText}>
+                {role === 'coach' ? (
+                  <>
+                    📅 <Text style={{ fontWeight: '700' }}>Schedule your lesson before switching contacts!</Text>
+                    {'\n'}
+                    Scheduling protects your time and earnings - if a student no-shows, you can flag it and your tokens will be refunded automatically. It also helps other coaches know what to expect, keeping the whole community accountable.
+                  </>
+                ) : (
+                  <>
+                    📅 <Text style={{ fontWeight: '700' }}>Schedule your lesson before switching contacts!</Text>
+                    {'\n'}
+                    Scheduling your lesson lets you review your coach after the session - helping other students find the best coaches. Don't miss your chance to share your experience!
+                  </>
+                )}
+              </Text>
               <TouchableOpacity
                 style={styles.nudgeDismissBtn}
                 onPress={() => { setBookingNudge(false); setNudgeDismissed(true); }}

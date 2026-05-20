@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "tenncoach-mobile",
+    "name": "TennCoach",
     "slug": "tenncoach",
     "scheme": "tenncoach",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "owner": "tenncoachs-organization",
     "extra": {
       "eas": {

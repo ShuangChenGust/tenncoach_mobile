@@ -1,3 +1,98 @@
+// ── Coach Session Management Modal ───────────────────────────────────────
+import type { Booking, Student } from '../../src/types';
+
+type CoachSessionsModalProps = {
+  visible: boolean;
+  onClose: () => void;
+  coachId?: string | number;
+};
+
+const CoachSessionsModal: React.FC<CoachSessionsModalProps> = ({ visible, onClose, coachId }) => {
+  const [sessions, setSessions] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [actionLoading, setActionLoading] = useState<boolean>(false);
+  const [studentDetail, setStudentDetail] = useState<Student | null>(null);
+  useEffect(() => {
+    if (!visible || !coachId) return;
+    setLoading(true);
+    import('../../src/api').then(({ bookingsAPI }) => {
+      bookingsAPI.getForCoach(coachId).then((data: Booking[] = []) => {
+        setSessions(Array.isArray(data) ? data : []);
+        setLoading(false);
+      });
+    });
+  }, [visible, coachId]);
+
+  const handleAction = async (
+    type: 'attended' | 'noShow' | 'studentDetail',
+    bookingId: number,
+    studentId?: number
+  ): Promise<void> => {
+    setActionLoading(true);
+    const { bookingsAPI, studentsAPI } = await import('../../src/api');
+    if (type === 'attended') await bookingsAPI.markAttended(bookingId);
+    if (type === 'noShow') await bookingsAPI.markNoShow(bookingId);
+    // Refresh session list
+    if (coachId !== undefined) {
+      const data = await bookingsAPI.getForCoach(coachId);
+      setSessions(Array.isArray(data) ? data : []);
+    }
+    setActionLoading(false);
+    if (type === 'studentDetail' && studentId) {
+      const detail = await studentsAPI.getById(studentId);
+      setStudentDetail(detail as Student);
+    }
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', justifyContent: 'center', alignItems: 'center' }}>
+        <View style={{ backgroundColor: '#fff', borderRadius: 16, width: '92%', maxHeight: '85%' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderColor: '#eee' }}>
+            <Text style={{ fontWeight: '700', fontSize: 18 }}>My Sessions</Text>
+            <TouchableOpacity onPress={onClose}><Text style={{ fontSize: 22 }}>✕</Text></TouchableOpacity>
+          </View>
+          {loading ? (
+            <ActivityIndicator style={{ margin: 32 }} color="#2e7d32" />
+          ) : (
+            <ScrollView style={{ maxHeight: 400 }}>
+              {sessions.length === 0 ? (
+                <Text style={{ textAlign: 'center', color: '#888', margin: 32 }}>No upcoming sessions.</Text>
+              ) : sessions.map(session => (
+                <View key={session.booking_id} style={{ borderBottomWidth: 1, borderColor: '#eee', padding: 16 }}>
+                  <Text style={{ fontWeight: '700', fontSize: 16 }}>{session.student_name}</Text>
+                  <Text style={{ color: '#555', marginBottom: 4 }}>{session.date} {session.start_time}–{session.end_time}</Text>
+                  <Text style={{ color: '#888', marginBottom: 4 }}>Status: {session.status}</Text>
+                  <View style={{ flexDirection: 'row', gap: 12, marginTop: 6 }}>
+                    <TouchableOpacity disabled={actionLoading} style={{ backgroundColor: '#2e7d32', borderRadius: 8, padding: 8, marginRight: 8 }} onPress={() => handleAction('attended', session.booking_id)}>
+                      <Text style={{ color: '#fff', fontWeight: '700' }}>Check In</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity disabled={actionLoading} style={{ backgroundColor: '#dc2626', borderRadius: 8, padding: 8, marginRight: 8 }} onPress={() => handleAction('noShow', session.booking_id)}>
+                      <Text style={{ color: '#fff', fontWeight: '700' }}>Mark No Show</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity disabled={actionLoading} style={{ backgroundColor: '#2563eb', borderRadius: 8, padding: 8 }} onPress={() => handleAction('studentDetail', session.booking_id, session.student_id)}>
+                      <Text style={{ color: '#fff', fontWeight: '700' }}>Student Detail</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          )}
+          {studentDetail && (
+            <View style={{ padding: 16, borderTopWidth: 1, borderColor: '#eee' }}>
+              <Text style={{ fontWeight: '700', fontSize: 16 }}>Student Detail</Text>
+              <Text>Name: {studentDetail.name}</Text>
+              <Text>Email: {studentDetail.email}</Text>
+              {studentDetail.zipCode && <Text>ZIP: {studentDetail.zipCode}</Text>}
+              {studentDetail.gender && <Text>Gender: {studentDetail.gender}</Text>}
+              <TouchableOpacity style={{ marginTop: 8 }} onPress={() => setStudentDetail(null)}><Text style={{ color: '#2563eb' }}>Close</Text></TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator, Dimensions, FlatList, Image, KeyboardAvoidingView,
@@ -1833,7 +1928,7 @@ const styles = StyleSheet.create({
 
   profileHeader: {
     flexDirection: 'row', gap: 16, alignItems: 'center',
-    marginTop: 8, marginHorizontal: 16, marginBottom: 16, padding: 20,
+    marginTop: 0, marginHorizontal: 16, marginBottom: 4, paddingVertical: 10, paddingHorizontal: 16,
     backgroundColor: '#667eea', borderRadius: 16,
   },
   cdAvatar: { width: 80, height: 80, borderRadius: 40, borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.6)' },
